@@ -1,0 +1,15 @@
+{
+  "name": "referrer-tracker",
+  "version": "1.0.0",
+  "description": "Sistema de tracking de referidos con validación de licencias",
+  "scripts": {
+    "build": "terser standalone-script/referrer-tracker.js -o standalone-script/referrer-tracker.min.js -c -m --comments false",
+    "build:watch": "terser standalone-script/referrer-tracker.js -o standalone-script/referrer-tracker.min.js -c -m --comments false --watch"
+  },
+  "keywords": ["referrer", "tracker", "analytics"],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "terser": "^5.31.0"
+  }
+}
