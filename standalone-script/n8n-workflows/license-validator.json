@@ -1,0 +1,311 @@
+{
+  "name": "Referrer Tracker - License Validator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "validate",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "Webhook - Validate License",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "validate-license"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.apiKey}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Check API Key Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"valid\": false,\n  \"error\": \"missing_api_key\",\n  \"message\": \"API key is required\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Response - Missing API Key",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 450]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "https://api.stripe.com/v1/customers",
+        "options": {
+          "qs": {
+            "parameter": [
+              {
+                "name": "email",
+                "value": "={{$json.body.apiKey}}"
+              },
+              {
+                "name": "limit",
+                "value": "1"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Stripe - Find Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [650, 150],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.data.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Check Customer Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 150]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"valid\": false,\n  \"error\": \"invalid_api_key\",\n  \"message\": \"API key not found\"\n}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "name": "Response - Invalid API Key",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.stripe.com/v1/subscriptions?customer={{$json.data[0].id}}&status=active",
+        "options": {}
+      },
+      "name": "Stripe - Get Active Subscription",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1050, 0],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.data.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Check Active Subscription",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"valid\": false,\n  \"error\": \"subscription_expired\",\n  \"message\": \"No active subscription found\"\n}",
+        "options": {
+          "responseCode": 402
+        }
+      },
+      "name": "Response - No Subscription",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 150]
+    },
+    {
+      "parameters": {
+        "jsCode": "const subscription = $input.item.json.data[0];\nconst product = subscription.items.data[0].price.product;\nconst metadata = product.metadata || {};\n\n// Get request data\nconst requestBody = $('Webhook - Validate License').item.json.body;\n\n// Check domain authorization\nconst allowedDomains = (metadata.allowed_domains || '').split(',');\nconst requestDomain = requestBody.domain;\n\nlet domainAllowed = true;\nif (allowedDomains.length > 0 && allowedDomains[0] !== '') {\n  domainAllowed = allowedDomains.some(domain => \n    requestDomain.includes(domain.trim())\n  );\n}\n\nif (!domainAllowed) {\n  return {\n    json: {\n      valid: false,\n      error: 'invalid_domain',\n      message: 'Domain not authorized for this API key'\n    }\n  };\n}\n\n// Build success response\nreturn {\n  json: {\n    valid: true,\n    plan: metadata.plan || 'free',\n    features: (metadata.features || 'basic_tracking').split(','),\n    customer: {\n      name: $input.item.json.customer?.name || 'Unknown',\n      email: $input.item.json.customer?.email || ''\n    },\n    limits: {\n      domains: parseInt(metadata.domains) || 1,\n      events: parseInt(metadata.events) || 1000\n    },\n    subscription: {\n      status: subscription.status,\n      currentPeriodEnd: subscription.current_period_end\n    }\n  }\n};"
+      },
+      "name": "Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1450, -150]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "name": "Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, -150]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "license_logs",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "api_key": "={{$('Webhook - Validate License').item.json.body.apiKey}}",
+            "domain": "={{$('Webhook - Validate License').item.json.body.domain}}",
+            "url": "={{$('Webhook - Validate License').item.json.body.url}}",
+            "valid": "={{$json.valid}}",
+            "plan": "={{$json.plan}}",
+            "timestamp": "={{new Date().toISOString()}}"
+          }
+        }
+      },
+      "name": "Log Usage",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1650, 50],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_db",
+          "name": "PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Validate License": {
+      "main": [
+        [
+          {
+            "node": "Check API Key Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Key Exists": {
+      "main": [
+        [
+          {
+            "node": "Stripe - Find Customer",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Missing API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe - Find Customer": {
+      "main": [
+        [
+          {
+            "node": "Check Customer Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Customer Found": {
+      "main": [
+        [
+          {
+            "node": "Stripe - Get Active Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Invalid API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe - Get Active Subscription": {
+      "main": [
+        [
+          {
+            "node": "Check Active Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Active Subscription": {
+      "main": [
+        [
+          {
+            "node": "Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - No Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Response": {
+      "main": [
+        [
+          {
+            "node": "Response - Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Log Usage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

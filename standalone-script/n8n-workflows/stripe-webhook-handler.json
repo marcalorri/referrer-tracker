@@ -1,0 +1,294 @@
+{
+  "name": "Referrer Tracker - Stripe Webhook Handler",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook - Stripe Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "stripe-webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.type}}",
+              "value2": "customer.subscription.created"
+            }
+          ]
+        }
+      },
+      "name": "Check Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate API Key\nfunction generateApiKey() {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let key = 'rt_live_';\n  for (let i = 0; i < 32; i++) {\n    key += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return key;\n}\n\nconst subscription = $input.item.json.body.data.object;\nconst customerId = subscription.customer;\nconst apiKey = generateApiKey();\n\nreturn {\n  json: {\n    customerId: customerId,\n    apiKey: apiKey,\n    subscriptionId: subscription.id,\n    plan: subscription.items.data[0].price.product.metadata?.plan || 'pro'\n  }\n};"
+      },
+      "name": "Generate API Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 200]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.stripe.com/v1/customers/{{$json.customerId}}",
+        "options": {
+          "bodyParametersUi": {
+            "parameter": [
+              {
+                "name": "metadata[api_key]",
+                "value": "={{$json.apiKey}}"
+              }
+            ]
+          }
+        }
+      },
+      "name": "Stripe - Update Customer with API Key",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "table": "api_keys",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "api_key": "={{$('Generate API Key').item.json.apiKey}}",
+            "customer_id": "={{$('Generate API Key').item.json.customerId}}",
+            "subscription_id": "={{$('Generate API Key').item.json.subscriptionId}}",
+            "plan": "={{$('Generate API Key').item.json.plan}}",
+            "status": "active",
+            "created_at": "={{new Date().toISOString()}}"
+          }
+        }
+      },
+      "name": "Save API Key to Database",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [1050, 200],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_db",
+          "name": "PostgreSQL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.stripe.com/v1/customers/{{$('Generate API Key').item.json.customerId}}",
+        "options": {}
+      },
+      "name": "Stripe - Get Customer Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 200],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@referrertracker.com",
+        "toEmail": "={{$json.email}}",
+        "subject": "Welcome to Referrer Tracker - Your API Key",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }\n    .api-key { background: #fff; border: 2px solid #667eea; padding: 15px; border-radius: 5px; font-family: monospace; font-size: 14px; word-break: break-all; margin: 20px 0; }\n    .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n    .footer { text-align: center; color: #666; font-size: 12px; margin-top: 30px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🎉 Welcome to Referrer Tracker!</h1>\n    </div>\n    <div class=\"content\">\n      <h2>Your API Key is Ready</h2>\n      <p>Thank you for subscribing to Referrer Tracker! Your account has been activated and your API key is ready to use.</p>\n      \n      <h3>Your API Key:</h3>\n      <div class=\"api-key\">{{$('Generate API Key').item.json.apiKey}}</div>\n      \n      <p><strong>⚠️ Important:</strong> Keep this API key secure. Do not share it publicly.</p>\n      \n      <h3>Quick Start:</h3>\n      <ol>\n        <li>Download the referrer-tracker.js script</li>\n        <li>Add it to your website</li>\n        <li>Configure your API key:\n          <pre style=\"background: #fff; padding: 10px; border-radius: 5px; overflow-x: auto;\">\nReferrerTracker.configure({\n  apiKey: '{{$('Generate API Key').item.json.apiKey}}'\n});\n          </pre>\n        </li>\n      </ol>\n      \n      <a href=\"https://referrertracker.com/dashboard\" class=\"button\">Go to Dashboard</a>\n      \n      <h3>Need Help?</h3>\n      <p>Check out our <a href=\"https://docs.referrertracker.com\">documentation</a> or contact us at support@referrertracker.com</p>\n    </div>\n    <div class=\"footer\">\n      <p>Referrer Tracker | <a href=\"https://referrertracker.com\">referrertracker.com</a></p>\n      <p>You're receiving this email because you subscribed to Referrer Tracker.</p>\n    </div>\n  </div>\n</body>\n</html>"
+      },
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1450, 200],
+      "credentials": {
+        "smtp": {
+          "id": "smtp_credentials",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"received\": true}",
+        "options": {}
+      },
+      "name": "Response - OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.type}}",
+              "value2": "customer.subscription.deleted"
+            }
+          ]
+        }
+      },
+      "name": "Check Subscription Cancelled",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [650, 400]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "table": "api_keys",
+        "updateKey": "subscription_id",
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "status": "cancelled",
+            "cancelled_at": "={{new Date().toISOString()}}"
+          }
+        }
+      },
+      "name": "Deactivate API Key",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [850, 400],
+      "credentials": {
+        "postgres": {
+          "id": "postgres_db",
+          "name": "PostgreSQL"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Stripe Events": {
+      "main": [
+        [
+          {
+            "node": "Check Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Event Type": {
+      "main": [
+        [
+          {
+            "node": "Generate API Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Subscription Cancelled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate API Key": {
+      "main": [
+        [
+          {
+            "node": "Stripe - Update Customer with API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe - Update Customer with API Key": {
+      "main": [
+        [
+          {
+            "node": "Save API Key to Database",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save API Key to Database": {
+      "main": [
+        [
+          {
+            "node": "Stripe - Get Customer Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe - Get Customer Email": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Response - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Subscription Cancelled": {
+      "main": [
+        [
+          {
+            "node": "Deactivate API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deactivate API Key": {
+      "main": [
+        [
+          {
+            "node": "Response - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

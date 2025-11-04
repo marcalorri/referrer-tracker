@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referrer Tracker - Instrucciones de Uso</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin: 20px 0 10px 0;
+        }
+        
+        .code-block {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        
+        .code-block pre {
+            margin: 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .highlight {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            margin: 15px 0;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #2196F3;
+            margin: 15px 0;
+        }
+        
+        .success-box {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #4caf50;
+            margin: 15px 0;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        
+        table th,
+        table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        table th {
+            background: #667eea;
+            color: white;
+            font-weight: 600;
+        }
+        
+        table tr:hover {
+            background: #f5f5f5;
+        }
+        
+        ul, ol {
+            margin-left: 20px;
+            margin-top: 10px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            background: #667eea;
+            color: white;
+            border-radius: 12px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 30px;
+            text-align: center;
+            color: #666;
+        }
+        
+        code {
+            background: #f0f0f0;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+        
+        .step {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+        }
+        
+        .step-number {
+            display: inline-block;
+            width: 30px;
+            height: 30px;
+            background: #667eea;
+            color: white;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-weight: bold;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Referrer Tracker</h1>
+            <p>Script Universal para Tracking de Formularios</p>
+        </div>
+        
+        <div class="content">
+            <!-- Introducción -->
+            <div class="section">
+                <h2>¿Qué es Referrer Tracker?</h2>
+                <p>Script JavaScript standalone que captura automáticamente información de tracking (UTM parameters, click IDs, referrers) y la almacena en cookies para usarla en cualquier formulario de tu aplicación web.</p>
+                
+                <div class="success-box">
+                    <strong>✅ Framework-agnostic:</strong> Funciona con HTML puro, Laravel, React, Next.js, Vue, Angular, o cualquier framework web.
+                </div>
+            </div>
+
+            <!-- Instalación -->
+            <div class="section">
+                <h2>🚀 Instalación Rápida</h2>
+                
+                <div class="step">
+                    <span class="step-number">1</span>
+                    <strong>Incluye el script en tu HTML</strong>
+                    <div class="code-block">
+                        <pre>&lt;script src="referrer-tracker.js"&gt;&lt;/script&gt;</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">2</span>
+                    <strong>Añade campos ocultos a tu formulario</strong>
+                    <div class="code-block">
+                        <pre>&lt;!-- Campos básicos --&gt;
+&lt;input type="hidden" name="rt_source" class="js-rt-source"&gt;
+&lt;input type="hidden" name="rt_medium" class="js-rt-medium"&gt;
+&lt;input type="hidden" name="rt_campaign" class="js-rt-campaign"&gt;
+&lt;input type="hidden" name="rt_referrer" class="js-rt-referrer"&gt;
+
+&lt;!-- Click IDs (opcional pero recomendado) --&gt;
+&lt;input type="hidden" name="rt_gclid" class="js-rt-gclid"&gt;
+&lt;input type="hidden" name="rt_fbclid" class="js-rt-fbclid"&gt;
+&lt;input type="hidden" name="rt_msclkid" class="js-rt-msclkid"&gt;
+&lt;input type="hidden" name="rt_ttclid" class="js-rt-ttclid"&gt;</pre>
+                    </div>
+                </div>
+
+                <div class="step">
+                    <span class="step-number">3</span>
+                    <strong>¡Listo! Los campos se rellenan automáticamente</strong>
+                    <p style="margin-top: 10px;">El script detecta los valores y rellena los campos al cargar la página.</p>
+                </div>
+            </div>
+
+            <!-- Datos Capturados -->
+            <div class="section">
+                <h2>📊 Datos Capturados</h2>
+                
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Cookie</th>
+                            <th>Descripción</th>
+                            <th>Ejemplo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>rt_source</code></td>
+                            <td><code>rt_source</code></td>
+                            <td>Fuente de tráfico</td>
+                            <td>google, facebook, direct</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_medium</code></td>
+                            <td><code>rt_medium</code></td>
+                            <td>Medio de tráfico</td>
+                            <td>organic, cpc, social</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_campaign</code></td>
+                            <td><code>rt_campaign</code></td>
+                            <td>Nombre de campaña</td>
+                            <td>summer_sale_2024</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_referrer</code></td>
+                            <td><code>rt_referrer</code></td>
+                            <td>URL del referrer</td>
+                            <td>https://www.google.com</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_gclid</code></td>
+                            <td><code>rt_gclid</code></td>
+                            <td>Google Ads Click ID (gclid, wbraid, gbraid, dclid)</td>
+                            <td>Cj0KCQiA...</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_fbclid</code></td>
+                            <td><code>rt_fbclid</code></td>
+                            <td>Facebook Click ID (fbclid, fb_click_id, fbadid)</td>
+                            <td>IwAR3x...</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_msclkid</code></td>
+                            <td><code>rt_msclkid</code></td>
+                            <td>Microsoft Ads Click ID (msclkid, msclid)</td>
+                            <td>abc123...</td>
+                        </tr>
+                        <tr>
+                            <td><code>rt_ttclid</code></td>
+                            <td><code>rt_ttclid</code></td>
+                            <td>TikTok Click ID (ttclid, ttclid_ss, clickid)</td>
+                            <td>xyz789...</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="info-box">
+                    <strong>ℹ️ Duración de cookies:</strong> 30 días por defecto (configurable)
+                </div>
+            </div>
+
+            <!-- Uso con JavaScript -->
+            <div class="section">
+                <h2>💻 Uso Programático (JavaScript)</h2>
+                
+                <p>Además del auto-fill automático, puedes acceder a los valores desde JavaScript:</p>
+
+                <h3>Obtener todos los valores</h3>
+                <div class="code-block">
+                    <pre>const tracking = ReferrerTracker.getAll();
+console.log(tracking);
+// {
+//   source: 'google',
+//   medium: 'cpc',
+//   campaign: 'summer_sale',
+//   referrer: 'https://www.google.com',
+//   gclid: 'Cj0KCQiA...',
+//   fbclid: '',
+//   msclkid: '',
+//   ttclid: ''
+// }</pre>
+                </div>
+
+                <h3>Obtener valores individuales</h3>
+                <div class="code-block">
+                    <pre>const source = ReferrerTracker.getSource();
+const medium = ReferrerTracker.getMedium();
+const campaign = ReferrerTracker.getCampaign();
+const referrer = ReferrerTracker.getReferrer();
+const gclid = ReferrerTracker.getGclid();
+const fbclid = ReferrerTracker.getFbclid();</pre>
+                </div>
+
+                <h3>Uso en React/Next.js</h3>
+                <div class="code-block">
+                    <pre>useEffect(() => {
+    if (window.ReferrerTracker) {
+        const tracking = window.ReferrerTracker.getAll();
+        setFormData(prev => ({
+            ...prev,
+            ...tracking
+        }));
+    }
+}, []);</pre>
+                </div>
+
+                <h3>Uso en Laravel (Blade)</h3>
+                <div class="code-block">
+                    <pre>&lt;!-- En tu vista Blade --&gt;
+&lt;form action="{{ route('contact.submit') }}" method="POST"&gt;
+    @csrf
+    &lt;input type="text" name="name" required&gt;
+    &lt;input type="email" name="email" required&gt;
+    
+    &lt;!-- Campos de tracking --&gt;
+    &lt;input type="hidden" name="rt_source" class="js-rt-source"&gt;
+    &lt;input type="hidden" name="rt_medium" class="js-rt-medium"&gt;
+    &lt;input type="hidden" name="rt_gclid" class="js-rt-gclid"&gt;
+    
+    &lt;button type="submit"&gt;Enviar&lt;/button&gt;
+&lt;/form&gt;
+
+&lt;script src="{{ asset('js/referrer-tracker.js') }}"&gt;&lt;/script&gt;</pre>
+                </div>
+
+                <div class="code-block">
+                    <pre>// En tu Controller
+public function submit(Request $request)
+{
+    Contact::create([
+        'name' => $request->name,
+        'email' => $request->email,
+        'source' => $request->rt_source,
+        'medium' => $request->rt_medium,
+        'gclid' => $request->rt_gclid,
+    ]);
+}</pre>
+                </div>
+            </div>
+
+            <!-- Configuración -->
+            <div class="section">
+                <h2>⚙️ Configuración Avanzada</h2>
+
+                <h3>Activar modo debug</h3>
+                <div class="code-block">
+                    <pre>ReferrerTracker.configure({
+    debug: true  // Muestra logs en consola
+});</pre>
+                </div>
+
+                <h3>Personalizar prefijo de cookies</h3>
+                <div class="code-block">
+                    <pre>ReferrerTracker.configure({
+    cookiePrefix: 'mi_tracker_'
+});</pre>
+                </div>
+
+                <h3>Cambiar duración de cookies</h3>
+                <div class="code-block">
+                    <pre>ReferrerTracker.configure({
+    cookieExpireDays: 90  // 90 días en lugar de 30
+});</pre>
+                </div>
+
+                <h3>Deshabilitar auto-fill</h3>
+                <div class="code-block">
+                    <pre>ReferrerTracker.configure({
+    autoFillFields: false  // Gestiona los campos manualmente
+});</pre>
+                </div>
+            </div>
+
+            <!-- Formas de identificar campos -->
+            <div class="section">
+                <h2>🎯 Formas de Identificar Campos</h2>
+                
+                <p>El script soporta 3 formas de identificar campos:</p>
+
+                <h3>1. Por clase CSS (Recomendado)</h3>
+                <div class="code-block">
+                    <pre>&lt;input type="hidden" name="source" class="js-rt-source"&gt;
+&lt;input type="hidden" name="medium" class="js-rt-medium"&gt;
+&lt;input type="hidden" name="gclid" class="js-rt-gclid"&gt;</pre>
+                </div>
+
+                <h3>2. Por ID</h3>
+                <div class="code-block">
+                    <pre>&lt;input type="hidden" id="rt-source"&gt;
+&lt;input type="hidden" id="rt-medium"&gt;
+&lt;input type="hidden" id="rt-gclid"&gt;</pre>
+                </div>
+
+                <h3>3. Por nombre (name)</h3>
+                <div class="code-block">
+                    <pre>&lt;input type="hidden" name="rt_source"&gt;
+&lt;input type="hidden" name="rt_medium"&gt;
+&lt;input type="hidden" name="rt_gclid"&gt;</pre>
+                </div>
+
+                <div class="highlight">
+                    <strong>💡 Tip:</strong> Puedes usar cualquiera de las tres formas o combinarlas. El script detectará y rellenará todos los campos que encuentre.
+                </div>
+            </div>
+
+            <!-- Ejemplos de URLs -->
+            <div class="section">
+                <h2>🔗 Ejemplos de URLs con Tracking</h2>
+
+                <h3>URL con parámetros UTM</h3>
+                <div class="code-block">
+                    <pre>https://tudominio.com/landing?utm_source=google&utm_medium=cpc&utm_campaign=summer_sale</pre>
+                </div>
+                <p><strong>Resultado:</strong> source=google, medium=cpc, campaign=summer_sale</p>
+
+                <h3>URL con Google Ads</h3>
+                <div class="code-block">
+                    <pre>https://tudominio.com/landing?gclid=Cj0KCQiA...</pre>
+                </div>
+                <p><strong>Resultado:</strong> source=google, medium=cpc, gclid=Cj0KCQiA...</p>
+
+                <h3>URL con Facebook Ads</h3>
+                <div class="code-block">
+                    <pre>https://tudominio.com/landing?fbclid=IwAR3x...&utm_campaign=black_friday</pre>
+                </div>
+                <p><strong>Resultado:</strong> source=facebook, medium=paid-social, campaign=black_friday, fbclid=IwAR3x...</p>
+
+                <h3>Tráfico orgánico desde Google</h3>
+                <div class="code-block">
+                    <pre>Referrer: https://www.google.com/search?q=...</pre>
+                </div>
+                <p><strong>Resultado:</strong> source=google, medium=organic, campaign=none</p>
+            </div>
+
+            <!-- Fuentes detectadas -->
+            <div class="section">
+                <h2>🌐 Fuentes de Tráfico Detectadas</h2>
+
+                <h3>Motores de Búsqueda</h3>
+                <ul>
+                    <li><span class="badge">Google</span> → source: google, medium: organic</li>
+                    <li><span class="badge">Bing</span> → source: bing, medium: organic</li>
+                    <li><span class="badge">Yahoo</span> → source: yahoo, medium: organic</li>
+                    <li><span class="badge">DuckDuckGo</span> → source: duckduckgo, medium: organic</li>
+                </ul>
+
+                <h3>Redes Sociales</h3>
+                <ul>
+                    <li><span class="badge">Facebook</span> → source: facebook, medium: social</li>
+                    <li><span class="badge">Twitter/X</span> → source: twitter, medium: social</li>
+                    <li><span class="badge">Instagram</span> → source: instagram, medium: social</li>
+                    <li><span class="badge">LinkedIn</span> → source: linkedin, medium: social</li>
+                    <li><span class="badge">TikTok</span> → source: tiktok, medium: social</li>
+                </ul>
+
+                <h3>Publicidad Pagada (Click IDs)</h3>
+                <ul>
+                    <li><span class="badge">Google Ads</span> gclid, wbraid, gbraid, dclid → source: google, medium: cpc</li>
+                    <li><span class="badge">Facebook Ads</span> fbclid, fb_click_id, fbadid → source: facebook, medium: cpc</li>
+                    <li><span class="badge">Microsoft Ads</span> msclkid, msclid → source: bing, medium: cpc</li>
+                    <li><span class="badge">TikTok Ads</span> ttclid, ttclid_ss, clickid → source: tiktok, medium: cpc</li>
+                </ul>
+                
+                <div class="info-box">
+                    <strong>💡 Nota:</strong> El script detecta automáticamente todas las variaciones de cada plataforma y las consolida en una sola cookie. Por ejemplo, <code>wbraid</code>, <code>gbraid</code> y <code>dclid</code> se guardan en la cookie <code>rt_gclid</code>.
+                </div>
+
+                <h3>Otros</h3>
+                <ul>
+                    <li><span class="badge">Tráfico Directo</span> → source: direct, medium: none</li>
+                    <li><span class="badge">Otros Sitios</span> → source: dominio.com, medium: referral</li>
+                </ul>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="section">
+                <h2>🔧 Solución de Problemas</h2>
+
+                <h3>Los campos no se rellenan</h3>
+                <ol>
+                    <li>Verifica que el script se carga antes del DOM</li>
+                    <li>Activa el modo debug: <code>ReferrerTracker.configure({ debug: true })</code></li>
+                    <li>Revisa la consola del navegador</li>
+                    <li>Verifica que los campos tengan las clases/IDs correctos</li>
+                </ol>
+
+                <h3>Las cookies no se guardan</h3>
+                <ol>
+                    <li>Verifica que tu sitio use HTTPS</li>
+                    <li>Comprueba la configuración de <code>cookiePath</code></li>
+                    <li>Revisa las DevTools → Application → Cookies</li>
+                </ol>
+
+                <h3>Los valores son incorrectos</h3>
+                <ol>
+                    <li>Limpia las cookies existentes</li>
+                    <li>Prueba con una URL con parámetros UTM</li>
+                    <li>Verifica que no haya otros scripts interfiriendo</li>
+                </ol>
+            </div>
+
+            <!-- Casos de uso -->
+            <div class="section">
+                <h2>💼 Casos de Uso</h2>
+
+                <div class="step">
+                    <strong>📈 Análisis de Conversiones</strong>
+                    <p>Guarda los datos de tracking con cada lead/venta para saber qué canales convierten mejor.</p>
+                </div>
+
+                <div class="step">
+                    <strong>🎯 Atribución de Marketing</strong>
+                    <p>Identifica qué campañas generan más resultados y optimiza tu presupuesto.</p>
+                </div>
+
+                <div class="step">
+                    <strong>💰 ROI de Publicidad</strong>
+                    <p>Conecta los click IDs con tus conversiones para medir el retorno de inversión exacto.</p>
+                </div>
+
+                <div class="step">
+                    <strong>🔍 Optimización de Campañas</strong>
+                    <p>Analiza qué fuentes y medios funcionan mejor para tu negocio.</p>
+                </div>
+            </div>
+
+            <!-- Privacidad -->
+            <div class="section">
+                <h2>🔒 Privacidad y GDPR</h2>
+                
+                <div class="info-box">
+                    <ul>
+                        <li>✅ No recopila datos personales por sí mismo</li>
+                        <li>✅ Solo almacena información técnica de navegación</li>
+                        <li>✅ Usa cookies de primera parte</li>
+                        <li>✅ No hace llamadas a servidores externos</li>
+                        <li>⚠️ Asegúrate de cumplir con GDPR/RGPD según tu jurisdicción</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p><strong>Referrer Tracker</strong> - Script Universal para Tracking de Formularios</p>
+            <p style="margin-top: 10px;">Basado en la lógica del plugin WordPress "Referrer Tracker for Forms and CMS"</p>
+            <p style="margin-top: 10px; color: #999;">GPL-2.0-or-later</p>
+        </div>
+    </div>
+</body>
+</html>

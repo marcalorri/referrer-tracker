@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create API Key - Referrer Tracker Admin</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #718096;
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+        }
+
+        .required {
+            color: #e53e3e;
+        }
+
+        input[type="text"],
+        input[type="email"],
+        input[type="number"],
+        select,
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        select:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .help-text {
+            font-size: 14px;
+            color: #718096;
+            margin-top: 5px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            cursor: pointer;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.success {
+            background: #c6f6d5;
+            border: 2px solid #48bb78;
+            display: block;
+        }
+
+        .result.error {
+            background: #fed7d7;
+            border: 2px solid #e53e3e;
+            display: block;
+        }
+
+        .api-key-display {
+            background: #1a202c;
+            color: #48bb78;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 14px;
+            word-break: break-all;
+            margin: 15px 0;
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .plan-info {
+            background: #f7fafc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 10px;
+        }
+
+        .plan-info h4 {
+            margin-bottom: 10px;
+            color: #2d3748;
+        }
+
+        .plan-info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .plan-info li {
+            padding: 5px 0;
+            color: #718096;
+        }
+
+        .plan-info li::before {
+            content: '✓ ';
+            color: #48bb78;
+            font-weight: bold;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔑 Create API Key</h1>
+        <p class="subtitle">Manually create a new API key for a customer</p>
+
+        <form id="createKeyForm">
+            <!-- Customer Info -->
+            <div class="form-group">
+                <label for="customer_email">Customer Email <span class="required">*</span></label>
+                <input type="email" id="customer_email" name="customer_email" required>
+                <div class="help-text">Email address of the customer</div>
+            </div>
+
+            <div class="form-group">
+                <label for="customer_name">Customer Name</label>
+                <input type="text" id="customer_name" name="customer_name">
+                <div class="help-text">Optional: Full name of the customer</div>
+            </div>
+
+            <!-- Plan Selection -->
+            <div class="form-group">
+                <label for="plan">Plan <span class="required">*</span></label>
+                <select id="plan" name="plan" required onchange="updatePlanInfo()">
+                    <option value="free">Free - $0/month</option>
+                    <option value="pro" selected>Pro - $29/month</option>
+                    <option value="enterprise">Enterprise - $99/month</option>
+                </select>
+            </div>
+
+            <div id="planInfo" class="plan-info"></div>
+
+            <!-- Custom Limits (Optional) -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="domains_limit">Domains Limit</label>
+                    <input type="number" id="domains_limit" name="domains_limit" placeholder="Leave empty for plan default">
+                    <div class="help-text">Override plan default</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="monthly_events_limit">Monthly Events Limit</label>
+                    <input type="number" id="monthly_events_limit" name="monthly_events_limit" placeholder="Leave empty for plan default">
+                    <div class="help-text">Override plan default</div>
+                </div>
+            </div>
+
+            <!-- Allowed Domains -->
+            <div class="form-group">
+                <label for="allowed_domains">Allowed Domains</label>
+                <textarea id="allowed_domains" name="allowed_domains" rows="3" placeholder="example.com, www.example.com, staging.example.com"></textarea>
+                <div class="help-text">Comma-separated list of authorized domains. Leave empty to allow any domain.</div>
+            </div>
+
+            <!-- Duration -->
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="duration_months">Duration (months)</label>
+                    <input type="number" id="duration_months" name="duration_months" value="1" min="1">
+                    <div class="help-text">How many months until expiration</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="status">Status</label>
+                    <select id="status" name="status">
+                        <option value="active" selected>Active</option>
+                        <option value="pending">Pending</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Options -->
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="never_expires" name="never_expires">
+                    <label for="never_expires" style="margin: 0;">Never expires (lifetime access)</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <div class="checkbox-group">
+                    <input type="checkbox" id="send_email" name="send_email" checked>
+                    <label for="send_email" style="margin: 0;">Send welcome email to customer</label>
+                </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group">
+                <label for="notes">Internal Notes</label>
+                <textarea id="notes" name="notes" rows="2" placeholder="e.g., Created for testing, Special deal, etc."></textarea>
+                <div class="help-text">Internal notes (not visible to customer)</div>
+            </div>
+
+            <button type="submit" class="button">Create API Key</button>
+        </form>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #718096;">Creating API key...</p>
+        </div>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        // Configuration
+        const N8N_WEBHOOK_URL = 'https://YOUR-N8N-URL.com/webhook/create-api-key'; // ← Change this
+
+        const planConfigs = {
+            'free': {
+                domains: 1,
+                events: 1000,
+                features: ['Basic tracking']
+            },
+            'pro': {
+                domains: 5,
+                events: 50000,
+                features: ['Basic tracking', 'Click IDs', 'Analytics']
+            },
+            'enterprise': {
+                domains: 'Unlimited',
+                events: 'Unlimited',
+                features: ['Basic tracking', 'Click IDs', 'Analytics', 'White-label', 'Priority support']
+            }
+        };
+
+        // Update plan info display
+        function updatePlanInfo() {
+            const plan = document.getElementById('plan').value;
+            const config = planConfigs[plan];
+            const infoDiv = document.getElementById('planInfo');
+
+            infoDiv.innerHTML = `
+                <h4>${plan.charAt(0).toUpperCase() + plan.slice(1)} Plan Includes:</h4>
+                <ul>
+                    <li>Domains: ${config.domains}</li>
+                    <li>Monthly Events: ${config.events.toLocaleString()}</li>
+                    ${config.features.map(f => `<li>${f}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        // Initialize
+        updatePlanInfo();
+
+        // Handle form submission
+        document.getElementById('createKeyForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const data = {};
+
+            // Convert FormData to object
+            for (let [key, value] of formData.entries()) {
+                if (value) {
+                    data[key] = value;
+                }
+            }
+
+            // Handle checkboxes
+            data.never_expires = document.getElementById('never_expires').checked;
+            data.send_email = document.getElementById('send_email').checked;
+
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('result').style.display = 'none';
+            document.querySelector('.button').disabled = true;
+
+            try {
+                const response = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccess(result);
+                } else {
+                    showError(result.message || 'Failed to create API key');
+                }
+            } catch (error) {
+                showError('Network error: ' + error.message);
+            } finally {
+                document.getElementById('loading').classList.remove('active');
+                document.querySelector('.button').disabled = false;
+            }
+        });
+
+        function showSuccess(result) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result success';
+            resultDiv.innerHTML = `
+                <h3 style="color: #2f855a; margin-bottom: 15px;">✅ API Key Created Successfully!</h3>
+                <div class="api-key-display">
+                    <button class="copy-button" onclick="copyApiKey('${result.api_key}')">Copy</button>
+                    ${result.api_key}
+                </div>
+                <p><strong>Customer:</strong> ${result.customer_email}</p>
+                <p><strong>Plan:</strong> ${result.plan}</p>
+                <p><strong>Status:</strong> ${result.status}</p>
+                <p><strong>Expires:</strong> ${result.expires_at ? new Date(result.expires_at).toLocaleDateString() : 'Never'}</p>
+                ${result.send_email ? '<p style="margin-top: 15px; color: #2f855a;">📧 Welcome email sent to customer</p>' : ''}
+            `;
+        }
+
+        function showError(message) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result error';
+            resultDiv.innerHTML = `
+                <h3 style="color: #c53030; margin-bottom: 10px;">❌ Error</h3>
+                <p>${message}</p>
+            `;
+        }
+
+        function copyApiKey(apiKey) {
+            navigator.clipboard.writeText(apiKey).then(() => {
+                const button = event.target;
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            });
+        }
+    </script>
+</body>
+</html>

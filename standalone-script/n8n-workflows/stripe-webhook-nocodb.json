@@ -1,0 +1,543 @@
+{
+  "name": "Referrer Tracker - Stripe Webhook (NocoDB)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "stripe-webhook",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Webhook - Stripe Events",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "stripe-webhook"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.body.type}}",
+                    "value2": "customer.subscription.created"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "subscription_created"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.body.type}}",
+                    "value2": "customer.subscription.updated"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "subscription_updated"
+            },
+            {
+              "conditions": {
+                "string": [
+                  {
+                    "value1": "={{$json.body.type}}",
+                    "value2": "customer.subscription.deleted"
+                  }
+                ]
+              },
+              "renameOutput": true,
+              "outputKey": "subscription_deleted"
+            }
+          ]
+        }
+      },
+      "name": "Switch - Event Type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate API Key\nfunction generateApiKey() {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let key = 'rt_live_';\n  for (let i = 0; i < 32; i++) {\n    key += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return key;\n}\n\nconst subscription = $input.item.json.body.data.object;\nconst customerId = subscription.customer;\nconst productId = subscription.items.data[0].price.product;\nconst apiKey = generateApiKey();\n\n// Calculate expiration date (1 month from now)\nconst expiresAt = new Date();\nexpiresAt.setMonth(expiresAt.getMonth() + 1);\n\nreturn {\n  json: {\n    customerId: customerId,\n    apiKey: apiKey,\n    subscriptionId: subscription.id,\n    productId: productId,\n    status: subscription.status,\n    currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),\n    expiresAt: expiresAt.toISOString()\n  }\n};"
+      },
+      "name": "Generate API Key",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 150]
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.stripe.com/v1/customers/{{$json.customerId}}",
+        "options": {}
+      },
+      "name": "Stripe - Get Customer Info",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 150],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "url": "=https://api.stripe.com/v1/products/{{$('Generate API Key').item.json.productId}}",
+        "options": {}
+      },
+      "name": "Stripe - Get Product Metadata",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [850, 50],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const customer = $('Stripe - Get Customer Info').item.json;\nconst product = $input.item.json;\nconst apiKeyData = $('Generate API Key').item.json;\n\nconst metadata = product.metadata || {};\n\nreturn {\n  json: {\n    api_key: apiKeyData.apiKey,\n    customer_id: apiKeyData.customerId,\n    customer_name: customer.name || '',\n    customer_email: customer.email || '',\n    subscription_id: apiKeyData.subscriptionId,\n    plan: metadata.plan || 'pro',\n    status: 'active',\n    domains_limit: parseInt(metadata.domains) || 5,\n    monthly_events_limit: parseInt(metadata.events) || 50000,\n    features: metadata.features || 'basic_tracking,click_ids,analytics',\n    allowed_domains: metadata.allowed_domains || '',\n    current_month_events: 0,\n    created_at: new Date().toISOString(),\n    expires_at: apiKeyData.expiresAt,\n    last_used_at: null\n  }\n};"
+      },
+      "name": "Build API Key Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 150]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "api_keys",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "api_key",
+              "fieldValue": "={{$json.api_key}}"
+            },
+            {
+              "fieldName": "customer_id",
+              "fieldValue": "={{$json.customer_id}}"
+            },
+            {
+              "fieldName": "customer_name",
+              "fieldValue": "={{$json.customer_name}}"
+            },
+            {
+              "fieldName": "customer_email",
+              "fieldValue": "={{$json.customer_email}}"
+            },
+            {
+              "fieldName": "subscription_id",
+              "fieldValue": "={{$json.subscription_id}}"
+            },
+            {
+              "fieldName": "plan",
+              "fieldValue": "={{$json.plan}}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$json.status}}"
+            },
+            {
+              "fieldName": "domains_limit",
+              "fieldValue": "={{$json.domains_limit}}"
+            },
+            {
+              "fieldName": "monthly_events_limit",
+              "fieldValue": "={{$json.monthly_events_limit}}"
+            },
+            {
+              "fieldName": "features",
+              "fieldValue": "={{$json.features}}"
+            },
+            {
+              "fieldName": "allowed_domains",
+              "fieldValue": "={{$json.allowed_domains}}"
+            },
+            {
+              "fieldName": "current_month_events",
+              "fieldValue": "={{$json.current_month_events}}"
+            },
+            {
+              "fieldName": "created_at",
+              "fieldValue": "={{$json.created_at}}"
+            },
+            {
+              "fieldName": "expires_at",
+              "fieldValue": "={{$json.expires_at}}"
+            }
+          ]
+        }
+      },
+      "name": "NocoDB - Create API Key",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [1250, 150],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "headerAuth",
+        "method": "POST",
+        "url": "=https://api.stripe.com/v1/customers/{{$('Generate API Key').item.json.customerId}}",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "metadata[api_key]",
+              "value": "={{$('Generate API Key').item.json.apiKey}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "Stripe - Save API Key in Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [1250, 50],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "stripe_api_key",
+          "name": "Stripe API Key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@referrertracker.com",
+        "toEmail": "={{$('Build API Key Record').item.json.customer_email}}",
+        "subject": "🎉 Welcome to Referrer Tracker - Your API Key",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }\n    .container { max-width: 600px; margin: 0 auto; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 40px 20px; text-align: center; }\n    .content { background: #f9f9f9; padding: 40px 20px; }\n    .api-key-box { background: #fff; border: 3px solid #667eea; padding: 20px; border-radius: 10px; margin: 30px 0; text-align: center; }\n    .api-key { font-family: monospace; font-size: 16px; color: #667eea; font-weight: bold; word-break: break-all; }\n    .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 50px; margin: 20px 0; }\n    .code-block { background: #1a202c; color: #e2e8f0; padding: 20px; border-radius: 10px; margin: 20px 0; overflow-x: auto; }\n    .code-block pre { margin: 0; font-family: monospace; font-size: 14px; }\n    .footer { text-align: center; color: #666; font-size: 12px; padding: 20px; }\n    .warning { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🎉 Welcome to Referrer Tracker!</h1>\n      <p style=\"font-size: 18px; margin: 10px 0 0 0;\">Your account is ready</p>\n    </div>\n    \n    <div class=\"content\">\n      <h2>Hi {{$('Build API Key Record').item.json.customer_name || 'there'}}!</h2>\n      <p>Thank you for subscribing to Referrer Tracker. Your account has been activated and you're ready to start tracking your traffic sources.</p>\n      \n      <div class=\"api-key-box\">\n        <h3 style=\"margin-top: 0; color: #667eea;\">Your API Key</h3>\n        <div class=\"api-key\">{{$('Build API Key Record').item.json.api_key}}</div>\n      </div>\n      \n      <div class=\"warning\">\n        <strong>⚠️ Important:</strong> Keep this API key secure. Do not share it publicly or commit it to public repositories.\n      </div>\n      \n      <h3>Quick Start Guide</h3>\n      <ol style=\"line-height: 2;\">\n        <li><strong>Download the script:</strong> <a href=\"https://referrertracker.com/download\">referrer-tracker.js</a></li>\n        <li><strong>Add it to your website</strong></li>\n        <li><strong>Configure your API key</strong> (see code below)</li>\n        <li><strong>Add hidden fields to your forms</strong></li>\n      </ol>\n      \n      <h3>Installation Code</h3>\n      <div class=\"code-block\">\n        <pre>&lt;!-- Add the script --&gt;\n&lt;script src=\"referrer-tracker.js\"&gt;&lt;/script&gt;\n\n&lt;!-- Configure your API key --&gt;\n&lt;script&gt;\n  ReferrerTracker.configure({\n    apiKey: '{{$('Build API Key Record').item.json.api_key}}'\n  });\n&lt;/script&gt;\n\n&lt;!-- Add to your forms --&gt;\n&lt;input type=\"hidden\" name=\"rt_source\" class=\"js-rt-source\"&gt;\n&lt;input type=\"hidden\" name=\"rt_medium\" class=\"js-rt-medium\"&gt;\n&lt;input type=\"hidden\" name=\"rt_campaign\" class=\"js-rt-campaign\"&gt;\n&lt;input type=\"hidden\" name=\"rt_gclid\" class=\"js-rt-gclid\"&gt;</pre>\n      </div>\n      \n      <h3>Your Plan Details</h3>\n      <ul style=\"line-height: 2;\">\n        <li><strong>Plan:</strong> {{$('Build API Key Record').item.json.plan}}</li>\n        <li><strong>Domains:</strong> Up to {{$('Build API Key Record').item.json.domains_limit}}</li>\n        <li><strong>Monthly Events:</strong> {{$('Build API Key Record').item.json.monthly_events_limit}}</li>\n        <li><strong>Features:</strong> {{$('Build API Key Record').item.json.features}}</li>\n      </ul>\n      \n      <div style=\"text-align: center; margin: 40px 0;\">\n        <a href=\"https://referrertracker.com/docs\" class=\"button\">View Documentation</a>\n      </div>\n      \n      <h3>Need Help?</h3>\n      <p>We're here to help you get started:</p>\n      <ul>\n        <li>📚 <a href=\"https://docs.referrertracker.com\">Documentation</a></li>\n        <li>💬 <a href=\"mailto:support@referrertracker.com\">Email Support</a></li>\n        <li>🎥 <a href=\"https://referrertracker.com/tutorials\">Video Tutorials</a></li>\n      </ul>\n    </div>\n    \n    <div class=\"footer\">\n      <p><strong>Referrer Tracker</strong></p>\n      <p>You're receiving this email because you subscribed to Referrer Tracker.</p>\n      <p><a href=\"https://referrertracker.com\">referrertracker.com</a></p>\n    </div>\n  </div>\n</body>\n</html>"
+      },
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1450, 150],
+      "credentials": {
+        "smtp": {
+          "id": "smtp_credentials",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"received\": true}",
+        "options": {}
+      },
+      "name": "Response - OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const subscription = $input.item.json.body.data.object;\nconst subscriptionId = subscription.id;\nconst status = subscription.status;\n\n// Calculate new expiration date\nconst expiresAt = new Date(subscription.current_period_end * 1000).toISOString();\n\nreturn {\n  json: {\n    subscriptionId: subscriptionId,\n    status: status,\n    expiresAt: expiresAt\n  }\n};"
+      },
+      "name": "Extract Subscription Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "api_keys",
+        "options": {
+          "where": "=(subscription_id,eq,{{$json.subscriptionId}})"
+        }
+      },
+      "name": "NocoDB - Find by Subscription",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [850, 300],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "api_keys",
+        "updateKey": "id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$('Extract Subscription Data').item.json.status}}"
+            },
+            {
+              "fieldName": "expires_at",
+              "fieldValue": "={{$('Extract Subscription Data').item.json.expiresAt}}"
+            },
+            {
+              "fieldName": "updated_at",
+              "fieldValue": "={{new Date().toISOString()}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "NocoDB - Update Status",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [1050, 300],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const subscription = $input.item.json.body.data.object;\nconst subscriptionId = subscription.id;\n\nreturn {\n  json: {\n    subscriptionId: subscriptionId\n  }\n};"
+      },
+      "name": "Extract Subscription ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 450]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "api_keys",
+        "options": {
+          "where": "=(subscription_id,eq,{{$json.subscriptionId}})"
+        }
+      },
+      "name": "NocoDB - Find Subscription",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [850, 450],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "api_keys",
+        "updateKey": "id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "status",
+              "fieldValue": "cancelled"
+            },
+            {
+              "fieldName": "cancelled_at",
+              "fieldValue": "={{new Date().toISOString()}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "NocoDB - Deactivate API Key",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [1050, 450],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Stripe Events": {
+      "main": [
+        [
+          {
+            "node": "Switch - Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch - Event Type": {
+      "main": [
+        [
+          {
+            "node": "Generate API Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Subscription Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Extract Subscription ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate API Key": {
+      "main": [
+        [
+          {
+            "node": "Stripe - Get Customer Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stripe - Get Product Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stripe - Get Product Metadata": {
+      "main": [
+        [
+          {
+            "node": "Build API Key Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build API Key Record": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Create API Key",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Stripe - Save API Key in Customer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Create API Key": {
+      "main": [
+        [
+          {
+            "node": "Send Welcome Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Welcome Email": {
+      "main": [
+        [
+          {
+            "node": "Response - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Subscription Data": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Find by Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Find by Subscription": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Update Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Update Status": {
+      "main": [
+        [
+          {
+            "node": "Response - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Subscription ID": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Find Subscription",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Find Subscription": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Deactivate API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Deactivate API Key": {
+      "main": [
+        [
+          {
+            "node": "Response - OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

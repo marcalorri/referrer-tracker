@@ -1,0 +1,337 @@
+{
+  "name": "Referrer Tracker - License Validator (NocoDB)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "validate",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "Webhook - Validate License",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "validate-license"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.apiKey}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Check API Key Exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"valid\": false,\n  \"error\": \"missing_api_key\",\n  \"message\": \"API key is required\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Response - Missing API Key",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 450]
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "api_keys",
+        "options": {
+          "where": "=(api_key,eq,{{$json.body.apiKey}})"
+        }
+      },
+      "name": "NocoDB - Find API Key",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [650, 150],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{$json.list.length}}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "name": "Check API Key Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [850, 150]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"valid\": false,\n  \"error\": \"invalid_api_key\",\n  \"message\": \"API key not found or invalid\"\n}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "name": "Response - Invalid API Key",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const apiKeyData = $input.item.json.list[0];\nconst requestBody = $('Webhook - Validate License').item.json.body;\n\n// Check if subscription is active\nif (apiKeyData.status !== 'active') {\n  return {\n    json: {\n      valid: false,\n      error: 'subscription_inactive',\n      message: 'Subscription is not active',\n      status: apiKeyData.status\n    }\n  };\n}\n\n// Check if subscription has expired\nif (apiKeyData.expires_at) {\n  const expiresAt = new Date(apiKeyData.expires_at);\n  const now = new Date();\n  \n  if (expiresAt < now) {\n    return {\n      json: {\n        valid: false,\n        error: 'subscription_expired',\n        message: 'Subscription has expired',\n        expiresAt: apiKeyData.expires_at\n      }\n    };\n  }\n}\n\n// Check domain authorization\nconst allowedDomains = (apiKeyData.allowed_domains || '').split(',').map(d => d.trim()).filter(d => d);\nconst requestDomain = requestBody.domain;\n\nlet domainAllowed = true;\nif (allowedDomains.length > 0) {\n  domainAllowed = allowedDomains.some(domain => \n    requestDomain === domain || \n    requestDomain.endsWith('.' + domain) ||\n    domain === '*'\n  );\n}\n\nif (!domainAllowed) {\n  return {\n    json: {\n      valid: false,\n      error: 'invalid_domain',\n      message: 'Domain not authorized for this API key',\n      domain: requestDomain,\n      allowedDomains: allowedDomains\n    }\n  };\n}\n\n// Check usage limits (optional)\nif (apiKeyData.monthly_events_limit && apiKeyData.monthly_events_limit > 0) {\n  const currentEvents = apiKeyData.current_month_events || 0;\n  if (currentEvents >= apiKeyData.monthly_events_limit) {\n    return {\n      json: {\n        valid: false,\n        error: 'limit_exceeded',\n        message: 'Monthly events limit exceeded',\n        limit: apiKeyData.monthly_events_limit,\n        current: currentEvents\n      }\n    };\n  }\n}\n\n// Build success response\nconst features = (apiKeyData.features || 'basic_tracking').split(',').map(f => f.trim());\n\nreturn {\n  json: {\n    valid: true,\n    plan: apiKeyData.plan || 'pro',\n    features: features,\n    customer: {\n      name: apiKeyData.customer_name || 'Customer',\n      email: apiKeyData.customer_email || ''\n    },\n    limits: {\n      domains: parseInt(apiKeyData.domains_limit) || 5,\n      events: parseInt(apiKeyData.monthly_events_limit) || 50000\n    },\n    usage: {\n      currentEvents: parseInt(apiKeyData.current_month_events) || 0\n    },\n    subscription: {\n      status: apiKeyData.status,\n      expiresAt: apiKeyData.expires_at || null\n    },\n    apiKeyId: apiKeyData.id\n  }\n};"
+      },
+      "name": "Validate & Build Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.valid}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check If Valid",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1250, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {}
+      },
+      "name": "Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, -100]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{$json}}",
+        "options": {
+          "responseCode": "={{$json.error === 'invalid_domain' ? 403 : 402}}"
+        }
+      },
+      "name": "Response - Validation Failed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1650, 100]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "validation_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "api_key",
+              "fieldValue": "={{$('Webhook - Validate License').item.json.body.apiKey}}"
+            },
+            {
+              "fieldName": "domain",
+              "fieldValue": "={{$('Webhook - Validate License').item.json.body.domain}}"
+            },
+            {
+              "fieldName": "url",
+              "fieldValue": "={{$('Webhook - Validate License').item.json.body.url}}"
+            },
+            {
+              "fieldName": "valid",
+              "fieldValue": "={{$json.valid}}"
+            },
+            {
+              "fieldName": "plan",
+              "fieldValue": "={{$json.plan || 'unknown'}}"
+            },
+            {
+              "fieldName": "error",
+              "fieldValue": "={{$json.error || null}}"
+            },
+            {
+              "fieldName": "user_agent",
+              "fieldValue": "={{$('Webhook - Validate License').item.json.body.userAgent}}"
+            },
+            {
+              "fieldName": "timestamp",
+              "fieldValue": "={{new Date().toISOString()}}"
+            }
+          ]
+        }
+      },
+      "name": "NocoDB - Log Validation",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [1450, -100],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "api_keys",
+        "updateKey": "id",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "last_used_at",
+              "fieldValue": "={{new Date().toISOString()}}"
+            },
+            {
+              "fieldName": "current_month_events",
+              "fieldValue": "={{parseInt($json.usage.currentEvents || 0) + 1}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "NocoDB - Update Usage",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [1450, 0],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook - Validate License": {
+      "main": [
+        [
+          {
+            "node": "Check API Key Exists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Key Exists": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Find API Key",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Missing API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Find API Key": {
+      "main": [
+        [
+          {
+            "node": "Check API Key Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Key Found": {
+      "main": [
+        [
+          {
+            "node": "Validate & Build Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Invalid API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate & Build Response": {
+      "main": [
+        [
+          {
+            "node": "Check If Valid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check If Valid": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Log Validation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NocoDB - Update Usage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Validation Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Log Validation": {
+      "main": [
+        [
+          {
+            "node": "Response - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

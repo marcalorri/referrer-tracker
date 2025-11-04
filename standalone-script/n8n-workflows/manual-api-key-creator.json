@@ -1,0 +1,273 @@
+{
+  "name": "Referrer Tracker - Manual API Key Creator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "create-api-key",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "name": "Webhook - Create API Key",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "create-api-key"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.body.customer_email}}",
+              "operation": "isNotEmpty"
+            },
+            {
+              "value1": "={{$json.body.plan}}",
+              "operation": "isNotEmpty"
+            }
+          ]
+        }
+      },
+      "name": "Validate Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": false,\n  \"error\": \"missing_fields\",\n  \"message\": \"customer_email and plan are required\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Response - Missing Fields",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [650, 450]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate API Key\nfunction generateApiKey() {\n  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';\n  let key = 'rt_live_';\n  for (let i = 0; i < 32; i++) {\n    key += chars.charAt(Math.floor(Math.random() * chars.length));\n  }\n  return key;\n}\n\nconst body = $input.item.json.body;\n\n// Get plan configuration\nconst planConfig = {\n  'free': {\n    domains_limit: 1,\n    monthly_events_limit: 1000,\n    features: 'basic_tracking'\n  },\n  'pro': {\n    domains_limit: 5,\n    monthly_events_limit: 50000,\n    features: 'basic_tracking,click_ids,analytics'\n  },\n  'enterprise': {\n    domains_limit: 999,\n    monthly_events_limit: 999999,\n    features: 'basic_tracking,click_ids,analytics,white_label,priority_support'\n  }\n};\n\nconst plan = body.plan || 'pro';\nconst config = planConfig[plan] || planConfig['pro'];\n\n// Calculate expiration date\nconst expiresAt = new Date();\nif (body.duration_months) {\n  expiresAt.setMonth(expiresAt.getMonth() + parseInt(body.duration_months));\n} else {\n  expiresAt.setMonth(expiresAt.getMonth() + 1); // Default: 1 month\n}\n\n// Generate API key\nconst apiKey = generateApiKey();\n\nreturn {\n  json: {\n    api_key: apiKey,\n    customer_name: body.customer_name || '',\n    customer_email: body.customer_email,\n    customer_id: body.customer_id || 'manual_' + Date.now(),\n    subscription_id: body.subscription_id || null,\n    plan: plan,\n    status: body.status || 'active',\n    domains_limit: body.domains_limit || config.domains_limit,\n    monthly_events_limit: body.monthly_events_limit || config.monthly_events_limit,\n    features: body.features || config.features,\n    allowed_domains: body.allowed_domains || '',\n    current_month_events: 0,\n    created_at: new Date().toISOString(),\n    expires_at: body.never_expires ? null : expiresAt.toISOString(),\n    notes: body.notes || 'Created manually'\n  }\n};"
+      },
+      "name": "Generate API Key & Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [650, 150]
+    },
+    {
+      "parameters": {
+        "operation": "create",
+        "tableId": "api_keys",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldName": "api_key",
+              "fieldValue": "={{$json.api_key}}"
+            },
+            {
+              "fieldName": "customer_id",
+              "fieldValue": "={{$json.customer_id}}"
+            },
+            {
+              "fieldName": "customer_name",
+              "fieldValue": "={{$json.customer_name}}"
+            },
+            {
+              "fieldName": "customer_email",
+              "fieldValue": "={{$json.customer_email}}"
+            },
+            {
+              "fieldName": "subscription_id",
+              "fieldValue": "={{$json.subscription_id}}"
+            },
+            {
+              "fieldName": "plan",
+              "fieldValue": "={{$json.plan}}"
+            },
+            {
+              "fieldName": "status",
+              "fieldValue": "={{$json.status}}"
+            },
+            {
+              "fieldName": "domains_limit",
+              "fieldValue": "={{$json.domains_limit}}"
+            },
+            {
+              "fieldName": "monthly_events_limit",
+              "fieldValue": "={{$json.monthly_events_limit}}"
+            },
+            {
+              "fieldName": "features",
+              "fieldValue": "={{$json.features}}"
+            },
+            {
+              "fieldName": "allowed_domains",
+              "fieldValue": "={{$json.allowed_domains}}"
+            },
+            {
+              "fieldName": "current_month_events",
+              "fieldValue": "={{$json.current_month_events}}"
+            },
+            {
+              "fieldName": "created_at",
+              "fieldValue": "={{$json.created_at}}"
+            },
+            {
+              "fieldName": "expires_at",
+              "fieldValue": "={{$json.expires_at}}"
+            },
+            {
+              "fieldName": "notes",
+              "fieldValue": "={{$json.notes}}"
+            }
+          ]
+        }
+      },
+      "name": "NocoDB - Create API Key",
+      "type": "n8n-nodes-base.nocoDb",
+      "typeVersion": 1,
+      "position": [850, 150],
+      "credentials": {
+        "nocoDb": {
+          "id": "nocodb_credentials",
+          "name": "NocoDB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$('Webhook - Create API Key').item.json.body.send_email}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "Check Send Email",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1050, 150]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@referrertracker.com",
+        "toEmail": "={{$('Generate API Key & Config').item.json.customer_email}}",
+        "subject": "Your Referrer Tracker API Key",
+        "emailType": "html",
+        "message": "=<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }\n    .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }\n    .api-key { background: #fff; border: 3px solid #667eea; padding: 20px; border-radius: 10px; font-family: monospace; font-size: 16px; word-break: break-all; margin: 20px 0; text-align: center; color: #667eea; font-weight: bold; }\n    .info-box { background: #fff; padding: 15px; border-left: 4px solid #667eea; margin: 20px 0; }\n    .button { display: inline-block; background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 50px; margin: 10px 0; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>🎉 Your API Key is Ready!</h1>\n    </div>\n    <div class=\"content\">\n      <p>Hi {{$('Generate API Key & Config').item.json.customer_name || 'there'}}!</p>\n      <p>Your Referrer Tracker API key has been created and is ready to use.</p>\n      \n      <div class=\"api-key\">{{$('Generate API Key & Config').item.json.api_key}}</div>\n      \n      <div class=\"info-box\">\n        <strong>⚠️ Important:</strong> Keep this API key secure. Do not share it publicly.\n      </div>\n      \n      <h3>Your Plan Details:</h3>\n      <ul>\n        <li><strong>Plan:</strong> {{$('Generate API Key & Config').item.json.plan}}</li>\n        <li><strong>Domains:</strong> Up to {{$('Generate API Key & Config').item.json.domains_limit}}</li>\n        <li><strong>Monthly Events:</strong> {{$('Generate API Key & Config').item.json.monthly_events_limit}}</li>\n        <li><strong>Expires:</strong> {{$('Generate API Key & Config').item.json.expires_at ? new Date($('Generate API Key & Config').item.json.expires_at).toLocaleDateString() : 'Never'}}</li>\n      </ul>\n      \n      <h3>Quick Start:</h3>\n      <pre style=\"background: #1a202c; color: #e2e8f0; padding: 15px; border-radius: 5px; overflow-x: auto;\">&lt;script src=\"referrer-tracker.js\"&gt;&lt;/script&gt;\n&lt;script&gt;\n  ReferrerTracker.configure({\n    apiKey: '{{$('Generate API Key & Config').item.json.api_key}}'\n  });\n&lt;/script&gt;</pre>\n      \n      <div style=\"text-align: center; margin: 30px 0;\">\n        <a href=\"https://referrertracker.com/docs\" class=\"button\">View Documentation</a>\n      </div>\n      \n      <p>Need help? Contact us at <a href=\"mailto:support@referrertracker.com\">support@referrertracker.com</a></p>\n    </div>\n  </div>\n</body>\n</html>"
+      },
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1250, 50],
+      "credentials": {
+        "smtp": {
+          "id": "smtp_credentials",
+          "name": "SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"success\": true,\n  \"api_key\": \"{{$('Generate API Key & Config').item.json.api_key}}\",\n  \"customer_email\": \"{{$('Generate API Key & Config').item.json.customer_email}}\",\n  \"plan\": \"{{$('Generate API Key & Config').item.json.plan}}\",\n  \"status\": \"{{$('Generate API Key & Config').item.json.status}}\",\n  \"expires_at\": \"{{$('Generate API Key & Config').item.json.expires_at}}\",\n  \"message\": \"API key created successfully\"\n}",
+        "options": {}
+      },
+      "name": "Response - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1450, 150]
+    }
+  ],
+  "connections": {
+    "Webhook - Create API Key": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Generate API Key & Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Missing Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate API Key & Config": {
+      "main": [
+        [
+          {
+            "node": "NocoDB - Create API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NocoDB - Create API Key": {
+      "main": [
+        [
+          {
+            "node": "Check Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Send Email": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Response - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Response - Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

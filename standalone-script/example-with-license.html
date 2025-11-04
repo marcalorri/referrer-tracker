@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Referrer Tracker - Example with License</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .info-box {
+            background: #f0f8ff;
+            border-left: 4px solid #0066cc;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        .form-group {
+            margin: 15px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"],
+        input[type="email"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        .tracking-info {
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+        }
+        .tracking-info h3 {
+            margin-top: 0;
+        }
+        .tracking-value {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-left: 3px solid #0066cc;
+            padding-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Referrer Tracker - Licensed Version</h1>
+    
+    <div class="info-box">
+        <strong>🔑 License Required:</strong> This script requires a valid API key to function.
+        <br><br>
+        Get your API key at: <a href="https://referrertracker.com" target="_blank">https://referrertracker.com</a>
+    </div>
+
+    <div class="tracking-info">
+        <h3>Current Tracking Values:</h3>
+        <div class="tracking-value">
+            <strong>Source:</strong> <span id="display-source">-</span>
+        </div>
+        <div class="tracking-value">
+            <strong>Medium:</strong> <span id="display-medium">-</span>
+        </div>
+        <div class="tracking-value">
+            <strong>Campaign:</strong> <span id="display-campaign">-</span>
+        </div>
+        <div class="tracking-value">
+            <strong>Referrer:</strong> <span id="display-referrer">-</span>
+        </div>
+        <div class="tracking-value">
+            <strong>GCLID:</strong> <span id="display-gclid">-</span>
+        </div>
+        <div class="tracking-value">
+            <strong>FBCLID:</strong> <span id="display-fbclid">-</span>
+        </div>
+    </div>
+
+    <h2>Contact Form</h2>
+    <form id="contactForm" action="/submit" method="POST">
+        <div class="form-group">
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" required>
+        </div>
+
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" name="email" required>
+        </div>
+
+        <div class="form-group">
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" rows="4" style="width: 100%; padding: 8px;"></textarea>
+        </div>
+
+        <!-- Hidden tracking fields - automatically filled by the script -->
+        <input type="hidden" name="rt_source" class="js-rt-source">
+        <input type="hidden" name="rt_medium" class="js-rt-medium">
+        <input type="hidden" name="rt_campaign" class="js-rt-campaign">
+        <input type="hidden" name="rt_referrer" class="js-rt-referrer">
+        <input type="hidden" name="rt_gclid" class="js-rt-gclid">
+        <input type="hidden" name="rt_fbclid" class="js-rt-fbclid">
+        <input type="hidden" name="rt_msclkid" class="js-rt-msclkid">
+        <input type="hidden" name="rt_ttclid" class="js-rt-ttclid">
+
+        <button type="submit">Send</button>
+    </form>
+
+    <!-- Include the Referrer Tracker script -->
+    <script src="referrer-tracker.js"></script>
+    
+    <script>
+        // STEP 1: Configure your API key (REQUIRED)
+        ReferrerTracker.configure({
+            apiKey: 'YOUR_API_KEY_HERE', // Replace with your actual API key
+            debug: true // Enable debug mode to see console logs
+        });
+
+        // STEP 2: Initialize the tracker (will validate license automatically)
+        // The script auto-initializes, but you can also call it manually:
+        // ReferrerTracker.init();
+
+        // STEP 3: Display tracking values in the page
+        function updateDisplay() {
+            document.getElementById('display-source').textContent = ReferrerTracker.getSource() || '-';
+            document.getElementById('display-medium').textContent = ReferrerTracker.getMedium() || '-';
+            document.getElementById('display-campaign').textContent = ReferrerTracker.getCampaign() || '-';
+            document.getElementById('display-referrer').textContent = ReferrerTracker.getReferrer() || '-';
+            document.getElementById('display-gclid').textContent = ReferrerTracker.getGclid() || '-';
+            document.getElementById('display-fbclid').textContent = ReferrerTracker.getFbclid() || '-';
+        }
+
+        // Wait for tracker to initialize and update display
+        setTimeout(updateDisplay, 1000);
+
+        // STEP 4: Handle form submission (optional)
+        document.getElementById('contactForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get all tracking values
+            const trackingData = ReferrerTracker.getAll();
+            
+            console.log('Form submitted with tracking data:', trackingData);
+            
+            // Here you would normally send the form data to your server
+            alert('Form submitted! Check console for tracking data.');
+        });
+    </script>
+
+    <div class="info-box" style="margin-top: 40px;">
+        <h3>🧪 Test URLs:</h3>
+        <p>Try these URLs to test different tracking scenarios:</p>
+        <ul>
+            <li><code>?utm_source=google&utm_medium=cpc&utm_campaign=summer_sale</code></li>
+            <li><code>?gclid=Cj0KCQiA...</code> (Google Ads)</li>
+            <li><code>?fbclid=IwAR3x...</code> (Facebook Ads)</li>
+            <li><code>?msclkid=abc123...</code> (Microsoft Ads)</li>
+        </ul>
+    </div>
+</body>
+</html>
