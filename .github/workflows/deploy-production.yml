@@ -1,0 +1,68 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches:
+      - main  # Se ejecuta al hacer push a main
+  workflow_dispatch:  # También permite ejecución manual
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: 22
+          script: |
+            # Ir al directorio del proyecto
+            cd /var/www/referrertracker-deploy
+            
+            # Hacer pull de los cambios
+            git pull origin main
+            
+            # Deploy Website
+            echo "Deploying Website..."
+            cd /var/www/referrertracker.com
+            rsync -av --delete /var/www/referrertracker-deploy/src/website/ ./ \
+              --exclude node_modules \
+              --exclude .env \
+              --exclude package-lock.json
+            npm install --production
+            pm2 restart website
+            
+            # Deploy API
+            echo "Deploying API..."
+            cd /var/www/api.referrertracker.com
+            rsync -av --delete /var/www/referrertracker-deploy/src/api/ ./ \
+              --exclude node_modules \
+              --exclude .env \
+              --exclude package-lock.json
+            npm install --production
+            pm2 restart api
+            
+            # Deploy Admin
+            echo "Deploying Admin..."
+            cd /var/www/admin.referrertracker.com
+            rsync -av --delete /var/www/referrertracker-deploy/src/admin/ ./ \
+              --exclude node_modules \
+              --exclude .env \
+              --exclude package-lock.json
+            npm install --production
+            pm2 restart admin
+            
+            echo "Deploy completed successfully!"
+            echo ""
+            echo "NOTA: CDN (cdn.referrertracker.com) se despliega con scripts/deploy-clean.ps1 a Cloudflare"
